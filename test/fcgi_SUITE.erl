@@ -91,9 +91,9 @@ init_per_group('php-fpm', Config) ->
 					]}
 				]}
 			]),
-			{ok, _} = cowboy:start_http(fcgi, 100,
+			{ok, _} = cowboy:start_clear(fcgi,
 				[{port, TcpPort}],
-				[{env, [{dispatch, Dispatch}]}]
+				#{env => #{dispatch => Dispatch}}
 			),
 			[{kill_path, KillPath}, {tcp_port, TcpPort}|Config]
 	end;
