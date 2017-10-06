@@ -182,7 +182,8 @@ handle_req(Req,
             timeout ->
               cowboy_req:reply(504, Req3);
             CGIBody ->
-              send_response(Req3, Head, CGIBody) end;
+              send_response(Req3, Head, CGIBody)
+          end;
         error ->
           cowboy_req:reply(502, Req3);
         timeout ->
@@ -247,7 +248,6 @@ params(Params, Acc) ->
                 [{ParamName, [Value, value_sep(Name) | AccValue]} | Acc2];
               _ ->
                 [{ParamName, Value} | Acc1] end end end,
-  io:format("Params: ~p~n", [Params]),
   maps:fold(F, Acc, Params).
 
 -spec value_sep(binary()) -> char().
@@ -433,7 +433,7 @@ decode_cgi_head(Head, Rest, More,
   decode_cgi_head(Head, Rest, More);
 decode_cgi_head(Head = #cgi_head{headers = Headers}, Rest, More,
                 {http_header, _, Name, _, Value}) ->
-  NewHead = Head#cgi_head{headers = [{Name, Value} | Headers]},
+  NewHead = Head#cgi_head{headers = maps:put(Name, Value, Headers)},
   decode_cgi_head(NewHead, Rest, More);
 decode_cgi_head(Head, Rest, More, http_eoh) ->
   {Head, Rest, More};
@@ -485,7 +485,7 @@ send_redirect(Req, #cgi_head{type = Type,
 reply(Req, Body, Status, undefined, Headers) ->
   cowboy_req:reply(Status, Headers, Body, Req);
 reply(Req, Body, Status, Type, Headers) ->
-  cowboy_req:reply(Status, [{<<"Content-Type">>, Type} | Headers], Body, Req).
+  cowboy_req:reply(Status, maps:put(<<"Content-Type">>, Type, Headers), Body, Req).
 
 -ifdef(TEST).
 
