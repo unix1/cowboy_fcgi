@@ -14,8 +14,8 @@
 
 -module(cowboy_http_fcgi).
 -author('Anthony Ramine <nox@dev-extend.eu>').
--behaviour(cowboy_http_handler).
--export([init/3, handle/2, terminate/3]).
+-behaviour(cowboy_handler).
+-export([init/2, handle/2, terminate/3]).
 
 -include_lib("eunit/include/eunit.hrl").
 
@@ -42,11 +42,11 @@
 -record(cgi_head, {status = 200 :: cowboy_http:status(),
                    type :: undefined | binary(),
                    location :: undefined | binary(),
-                   headers = [] :: cowboy_http:headers()}).
+                   headers = #{} :: cowboy:http_headers()}).
 
--spec init({atom(), http}, http_req(), [option()]) ->
+-spec init(http_req(), [option()]) ->
             {ok, http_req(), #state{}}.
-init({Transport, http}, Req, Opts) ->
+init(Req, Opts) ->
   {name, Name} = lists:keyfind(name, 1, Opts),
   Timeout = case lists:keyfind(timeout, 1, Opts) of
     {timeout, To} -> To;
@@ -57,23 +57,25 @@ init({Transport, http}, Req, Opts) ->
   PathRoot = case lists:keyfind(path_root, 1, Opts) of
     {path_root, Pr} -> Pr;
     false -> ScriptDir end,
-  Https = Transport =:= ssl,
-  case whereis(Name) of
+  Https = cowboy_req:scheme(Req) =:= <<"https">>,
+  State = case whereis(Name) of
     Server when is_pid(Server) ->
-      State = #state{server = whereis(Name),
-                     timeout = Timeout,
-                     script_dir = ScriptDir,
-                     path_root = PathRoot,
-                     https = Https},
-      {ok, Req, State} end.
+      #state{server = whereis(Name),
+             timeout = Timeout,
+             script_dir = ScriptDir,
+             path_root = PathRoot,
+             https = Https}
+  end,
+  handle(Req, State).
 
+%% TODO handle may not need to be exported anymore
 -spec handle(http_req(), #state{}) -> {ok, http_req(), #state{}}.
 handle(Req, State) ->
-  {Path, Req2} = cowboy_req:path(Req),
-  {PathInfo, Req3} = cowboy_req:path_info(Req2),
+  Path = cowboy_req:path(Req),
+  PathInfo = cowboy_req:path_info(Req),
   [RawPath|_] = binary:split(Path, <<"?">>),
   PathParts = binary:split(RawPath, <<"/">>, [global, trim_all]),
-  Result = handle(Req3, State, {req, PathParts, PathInfo, RawPath}),
+  Result = handle(Req, State, {req, PathParts, PathInfo, RawPath}),
   Result.
 
 -spec handle(http_req(), #state{}, {req, [binary()], cowboy_router:tokens() | undefined, binary()}) ->
@@ -86,7 +88,7 @@ handle(Req, State, {req, Path, undefined, _}) ->
   handle_scriptname(Req, State, CGIParams, Path);
 handle(Req, State = #state{path_root = undefined}, {req, _, _, _}) ->
   % A path info is here but the handler doesn't have a path root.
-  {ok, Req2} = cowboy_req:reply(500, [], [], Req),
+  Req2 = cowboy_req:reply(500, Req),
   {ok, Req2, State};
 handle(Req, State = #state{path_root = PathRoot}, {req, Path, [], RawPath}) ->
   case binary:last(RawPath) of
@@ -117,7 +119,7 @@ handle_scriptname(Req, State = #state{script_dir = undefined}, CGIParams,
 handle_scriptname(Req, State, _CGIParams, []) ->
   % The handler should send a SCRIPT_FILENAME param but there was no path
   % provided.
-  {ok, Req2} = cowboy_req:reply(500, [], [], Req),
+  Req2 = cowboy_req:reply(500, Req),
   {ok, Req2, State};
 handle_scriptname(Req, State = #state{script_dir = Dir}, CGIParams,
                   ScriptName) ->
@@ -129,19 +131,18 @@ handle_scriptname(Req, State = #state{script_dir = Dir}, CGIParams,
 
 -spec handle_req(http_req(), #state{}, [{binary(), iodata()}]) ->
                   {ok, http_req(), #state{}}.
-handle_req(Req0,
+handle_req(Req,
            State = #state{server = Server,
                           timeout = Timeout,
                           https = Https},
            CGIParams) ->
-  {Method, Req02} = cowboy_req:method(Req0),
-  {Version, Req03} = cowboy_req:version(Req02),
-  {RawQs, Req04} = cowboy_req:qs(Req03),
-  {RawHost, Req05} = cowboy_req:host(Req04),
-  {Port, Req06} = cowboy_req:port(Req05),
-  {Headers, Req07} = cowboy_req:headers(Req06),
-  Req = Req07,
-  {{Address, _Port}, Req1} = cowboy_req:peer(Req),
+  Method = cowboy_req:method(Req),
+  Version = cowboy_req:version(Req),
+  RawQs = cowboy_req:qs(Req),
+  RawHost = cowboy_req:host(Req),
+  Port = cowboy_req:port(Req),
+  Headers = cowboy_req:headers(Req),
+  {Address, _Port} = cowboy_req:peer(Req),
   AddressStr = inet_parse:ntoa(Address),
   % @todo Implement correctly the following parameters:
   % - AUTH_TYPE = auth-scheme token
@@ -162,31 +163,34 @@ handle_req(Req0,
   CGIParams3 = params(Headers, CGIParams2),
   case ex_fcgi:begin_request(Server, responder, CGIParams3, Timeout) of
     error ->
-      {ok, Req2} = cowboy_req:reply(502, [], [], Req1),
+      Req2 = cowboy_req:reply(502, Req),
       {ok, Req2, State};
     {ok, Ref} ->
-      Req3 = case cowboy_req:body(Req1) of
+      Req3 = case cowboy_req:read_body(Req) of
         {ok, Body, Req2} ->
           ex_fcgi:send(Server, Ref, Body),
           Req2;
+        %% TODO do we need to add {more, Body, Req} case?
         {error, badarg} ->
-          Req1 end,
+          Req end,
       Fun = fun decode_cgi_head/3,
       {ok, Req4} = case fold_k_stdout(#cgi_head{}, <<>>, Fun, Ref) of
         {Head, Rest, Fold} ->
           case acc_body([], Rest, Fold) of
             error ->
-              cowboy_req:reply(502, [], [], Req3);
+              cowboy_req:reply(502, Req3);
             timeout ->
-              cowboy_req:reply(504, [], [], Req3);
+              cowboy_req:reply(504, Req3);
             CGIBody ->
-              send_response(Req3, Head, CGIBody) end;
+              send_response(Req3, Head, CGIBody)
+          end;
         error ->
-          cowboy_req:reply(502, [], [], Req3);
+          cowboy_req:reply(502, Req3);
         timeout ->
-          cowboy_req:reply(504, [], [], Req3) end,
+          cowboy_req:reply(504, Req3) end,
       {ok, Req4, State} end.
 
+%% TODO remove terminate/3, it's now optional in cowboy_handler
 -spec terminate(cowboy_http_handler:terminate_reason(), http_req(), #state{}) -> ok.
 terminate(_Reason, _Req, _State) ->
   ok.
@@ -230,9 +234,9 @@ method(Method) when is_binary(Method) ->
 protocol(Version) when is_atom(Version) ->
   atom_to_binary(Version, utf8).
 
--spec params(cowboy_http:headers(), [{binary(), iodata()}]) -> [{binary(), iodata()}].
+-spec params(cowboy:http_headers(), [{binary(), iodata()}]) -> [{binary(), iodata()}].
 params(Params, Acc) ->
-  F = fun ({Name, Value}, Acc1) ->
+  F = fun (Name, Value, Acc1) ->
         case param(Name) of
           ignore ->
             Acc1;
@@ -244,9 +248,9 @@ params(Params, Acc) ->
                 [{ParamName, [Value, value_sep(Name) | AccValue]} | Acc2];
               _ ->
                 [{ParamName, Value} | Acc1] end end end,
-  lists:foldl(F, Acc, lists:keysort(1, Params)).
+  maps:fold(F, Acc, Params).
 
--spec value_sep(cowboy_http:header()) -> char().
+-spec value_sep(binary()) -> char().
 value_sep(<<"cookie">>) ->
   % Accumulate cookies using a semicolon because at least one known FastCGI
   % implementation (php-fpm) doesn't understand comma-separated cookies.
@@ -254,7 +258,7 @@ value_sep(<<"cookie">>) ->
 value_sep(_Header) ->
   $,.
 
--spec param(cowboy_http:header()) -> binary() | ignore.
+-spec param(binary()) -> binary() | ignore.
 param(<<"accept">>) ->
   <<"HTTP_ACCEPT">>;
 param(<<"accept-charset">>) ->
@@ -429,7 +433,7 @@ decode_cgi_head(Head, Rest, More,
   decode_cgi_head(Head, Rest, More);
 decode_cgi_head(Head = #cgi_head{headers = Headers}, Rest, More,
                 {http_header, _, Name, _, Value}) ->
-  NewHead = Head#cgi_head{headers = [{Name, Value} | Headers]},
+  NewHead = Head#cgi_head{headers = maps:put(Name, Value, Headers)},
   decode_cgi_head(NewHead, Rest, More);
 decode_cgi_head(Head, Rest, More, http_eoh) ->
   {Head, Rest, More};
@@ -447,7 +451,7 @@ acc_body(Acc, Buffer, More) ->
 -spec send_response(http_req(), #cgi_head{}, [binary()]) -> {ok, http_req()}.
 send_response(Req, #cgi_head{location = <<$/, _/binary>>}, _Body) ->
   % @todo Implement 6.2.2. Local Redirect Response.
-  cowboy_req:reply(502, [], [], Req);
+  cowboy_req:reply(502, Req);
 send_response(Req, Head = #cgi_head{location = undefined}, Body) ->
   % 6.2.1. Document Response.
   send_document(Req, Head, Body);
@@ -458,7 +462,7 @@ send_response(Req, Head, Body) ->
 
 -spec send_document(http_req(), #cgi_head{}, [binary()]) -> {ok, http_req()}.
 send_document(Req, #cgi_head{type = undefined}, _Body) ->
-  cowboy_req:reply(502, [], [], Req);
+  cowboy_req:reply(502, Req);
 send_document(Req, #cgi_head{status = Status, type = Type, headers = Headers},
               Body) ->
   reply(Req, Body, Status, Type, Headers).
@@ -468,20 +472,20 @@ send_redirect(Req, #cgi_head{status = Status = <<$3, _/binary>>,
                              type = Type,
                              location = Location,
                              headers = Headers}, Body) ->
-  reply(Req, Body, Status, Type, [{<<"Location">>, Location} | Headers]);
+  reply(Req, Body, Status, Type, maps:put(<<"Location">>, Location, Headers));
 send_redirect(Req, #cgi_head{type = Type,
                              location = Location,
                              headers = Headers}, Body) ->
-  reply(Req, Body, 302, Type, [{<<"Location">>, Location} | Headers]).
+  reply(Req, Body, 302, Type, maps:put(<<"Location">>, Location, Headers)).
 
 -spec reply(http_req(), [binary()], cowboy_http:status(), undefined | binary(),
-            cowboy_http:headers()) ->
+            cowboy:http_headers()) ->
              {ok, http_req()}.
 %% @todo Filter headers like Content-Length.
 reply(Req, Body, Status, undefined, Headers) ->
   cowboy_req:reply(Status, Headers, Body, Req);
 reply(Req, Body, Status, Type, Headers) ->
-  cowboy_req:reply(Status, [{<<"Content-Type">>, Type} | Headers], Body, Req).
+  cowboy_req:reply(Status, maps:put(<<"Content-Type">>, Type, Headers), Body, Req).
 
 -ifdef(TEST).
 

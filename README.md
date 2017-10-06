@@ -11,7 +11,7 @@ latest Cowboy 1.x stable version.
 status
 ------
 
-It is currently tested against stable Cowboy version 1 and PHP 7 (it should
+It is currently tested against stable Cowboy version 2 and PHP 7 (it should
 also work with PHP 5).
 
 what is php-fpm?

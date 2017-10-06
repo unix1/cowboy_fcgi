@@ -91,9 +91,9 @@ init_per_group('php-fpm', Config) ->
 					]}
 				]}
 			]),
-			{ok, _} = cowboy:start_http(fcgi, 100,
+			{ok, _} = cowboy:start_clear(fcgi,
 				[{port, TcpPort}],
-				[{env, [{dispatch, Dispatch}]}]
+				#{env => #{dispatch => Dispatch}}
 			),
 			[{kill_path, KillPath}, {tcp_port, TcpPort}|Config]
 	end;
@@ -179,7 +179,7 @@ path_info_nonempty(Config) ->
 multiple(Config) ->
 	Url = build_url("/header.php?name=X-Multiple-Header", Config),
 	Request = {Url, [{"X-Multiple-Header", "1"}, {"X-Multiple-Header", "2"}]},
-	{ok, {{"HTTP/1.1", 200, "OK"}, _Headers, "2,1"}} =
+	{ok, {{"HTTP/1.1", 200, "OK"}, _Headers, "1, 2"}} =
 		httpc:request(get, Request, [], []).
 
 cookies(Config) ->

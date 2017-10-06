@@ -1,6 +1,10 @@
-/.eunit/
-/deps/
-/ebin/
-/logs/
-/test/*.beam
 .cowboy_fcgi_dialyzer.plt
+.eunit/
+.idea/
+.rebar/
+*.kdev4
+cowboy_fcgi.iml
+deps/
+ebin/
+logs/
+test/*.beam
