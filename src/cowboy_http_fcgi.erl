@@ -265,8 +265,6 @@ param(<<"accept-language">>) ->
   <<"HTTP_ACCEPT_LANGUAGE">>;
 param(<<"cache-control">>) ->
   <<"HTTP_CACHE_CONTROL">>;
-param(<<"connection">>) ->
-  ignore;
 param(<<"content-base">>) ->
   <<"HTTP_CONTENT_BASE">>;
 param(<<"content-encoding">>) ->
@@ -287,8 +285,6 @@ param(<<"etag">>) ->
   <<"HTTP_ETAG">>;
 param(<<"from">>) ->
   <<"HTTP_FROM">>;
-param(<<"host">>) ->
-  ignore;
 param(<<"if-modified-since">>) ->
   <<"HTTP_IF_MODIFIED_SINCE">>;
 param(<<"if-match">>) ->
@@ -313,8 +309,6 @@ param(<<"warning">>) ->
   <<"HTTP_WARNING">>;
 param(<<"x-forwarded-for">>) ->
   <<"HTTP_X_FORWARDED_FOR">>;
-param(Name) when is_atom(Name) ->
-  ignore;
 param(Name) when is_binary(Name) ->
   <<"HTTP_", (<< <<(param_char(C))>> || <<C>> <= Name >>)/binary>>.
 
