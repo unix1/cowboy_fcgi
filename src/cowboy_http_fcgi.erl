@@ -472,11 +472,11 @@ send_redirect(Req, #cgi_head{status = Status = <<$3, _/binary>>,
                              type = Type,
                              location = Location,
                              headers = Headers}, Body) ->
-  reply(Req, Body, Status, Type, [{<<"Location">>, Location} | Headers]);
+  reply(Req, Body, Status, Type, maps:put(<<"Location">>, Location, Headers));
 send_redirect(Req, #cgi_head{type = Type,
                              location = Location,
                              headers = Headers}, Body) ->
-  reply(Req, Body, 302, Type, [{<<"Location">>, Location} | Headers]).
+  reply(Req, Body, 302, Type, maps:put(<<"Location">>, Location, Headers)).
 
 -spec reply(http_req(), [binary()], cowboy_http:status(), undefined | binary(),
             cowboy:http_headers()) ->
