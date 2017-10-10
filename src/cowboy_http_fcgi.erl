@@ -168,7 +168,7 @@ handle_req(Req,
       {ok, Body, Req3} = handle_req_read_body(Req, <<>>),
       ex_fcgi:send(Server, Ref, Body),
       Fun = fun decode_cgi_head/3,
-      {ok, Req4} = case fold_k_stdout(#cgi_head{}, <<>>, Fun, Ref) of
+      Req4 = case fold_k_stdout(#cgi_head{}, <<>>, Fun, Ref) of
         {Head, Rest, Fold} ->
           case acc_body([], Rest, Fold) of
             error ->
@@ -446,7 +446,7 @@ acc_body(Acc, eof, _More) ->
 acc_body(Acc, Buffer, More) ->
   More([Buffer | Acc], <<>>, fun acc_body/3).
 
--spec send_response(http_req(), #cgi_head{}, [binary()]) -> {ok, http_req()}.
+-spec send_response(http_req(), #cgi_head{}, [binary()]) -> http_req().
 send_response(Req, #cgi_head{location = <<$/, _/binary>>}, _Body) ->
   % @todo Implement 6.2.2. Local Redirect Response.
   cowboy_req:reply(502, Req);
@@ -458,14 +458,14 @@ send_response(Req, Head, Body) ->
   % 6.2.4. Client Redirect Response with Document.
   send_redirect(Req, Head, Body).
 
--spec send_document(http_req(), #cgi_head{}, [binary()]) -> {ok, http_req()}.
+-spec send_document(http_req(), #cgi_head{}, [binary()]) -> http_req().
 send_document(Req, #cgi_head{type = undefined}, _Body) ->
   cowboy_req:reply(502, Req);
 send_document(Req, #cgi_head{status = Status, type = Type, headers = Headers},
               Body) ->
   reply(Req, Body, Status, Type, Headers).
 
--spec send_redirect(http_req(), #cgi_head{}, [binary()]) -> {ok, http_req()}.
+-spec send_redirect(http_req(), #cgi_head{}, [binary()]) -> http_req().
 send_redirect(Req, #cgi_head{status = Status = <<$3, _/binary>>,
                              type = Type,
                              location = Location,
@@ -477,8 +477,7 @@ send_redirect(Req, #cgi_head{type = Type,
   reply(Req, Body, 302, Type, maps:put(<<"Location">>, Location, Headers)).
 
 -spec reply(http_req(), [binary()], cowboy_http:status(), undefined | binary(),
-            cowboy:http_headers()) ->
-             {ok, http_req()}.
+            cowboy:http_headers()) -> http_req().
 %% @todo Filter headers like Content-Length.
 reply(Req, Body, Status, undefined, Headers) ->
   cowboy_req:reply(Status, Headers, Body, Req);
