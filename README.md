@@ -6,7 +6,7 @@ allows PHP scripts to run along side your Erlang web applications via `php-fpm`.
 
 This is a fork of [extend/cowboy_fcgi](https://github.com/extend/cowboy_fcgi)
 which is no longer maintained in that repo. I have updated the code to support
-latest Cowboy 1.x stable version.
+latest Cowboy 2 stable version.
 
 status
 ------
