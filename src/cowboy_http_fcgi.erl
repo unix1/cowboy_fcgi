@@ -15,7 +15,7 @@
 -module(cowboy_http_fcgi).
 -author('Anthony Ramine <nox@dev-extend.eu>').
 -behaviour(cowboy_handler).
--export([init/2, handle/2]).
+-export([init/2]).
 
 -include_lib("eunit/include/eunit.hrl").
 
@@ -68,7 +68,6 @@ init(Req, Opts) ->
   end,
   handle(Req, State).
 
-%% TODO handle may not need to be exported anymore
 -spec handle(http_req(), #state{}) -> {ok, http_req(), #state{}}.
 handle(Req, State) ->
   Path = cowboy_req:path(Req),
