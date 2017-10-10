@@ -35,7 +35,7 @@
 
 -record(state, {server :: atom(),
                 timeout :: uint32(),
-                script_dir :: iodata(),
+                script_dir :: undefined | iodata(),
                 path_root :: undefined | iodata(),
                 https :: boolean()}).
 
@@ -166,13 +166,16 @@ handle_req(Req,
       Req2 = cowboy_req:reply(502, Req),
       {ok, Req2, State};
     {ok, Ref} ->
-      Req3 = case cowboy_req:read_body(Req) of
-        {ok, Body, Req2} ->
-          ex_fcgi:send(Server, Ref, Body),
-          Req2;
-        %% TODO do we need to add {more, Body, Req} case?
-        {error, badarg} ->
-          Req end,
+      {ok, Body, Req3} = handle_req_read_body(Req, <<>>),
+      ex_fcgi:send(Server, Ref, Body),
+      %Req3 = case cowboy_req:read_body(Req) of
+      %  {ok, Body, Req2} ->
+      %    ex_fcgi:send(Server, Ref, Body),
+      %    Req2;
+      %  %% TODO do we need to add {more, Body, Req} case?
+      %  {error, badarg} ->
+      %    Req
+      %end,
       Fun = fun decode_cgi_head/3,
       {ok, Req4} = case fold_k_stdout(#cgi_head{}, <<>>, Fun, Ref) of
         {Head, Rest, Fold} ->
@@ -187,8 +190,17 @@ handle_req(Req,
         error ->
           cowboy_req:reply(502, Req3);
         timeout ->
-          cowboy_req:reply(504, Req3) end,
-      {ok, Req4, State} end.
+          cowboy_req:reply(504, Req3)
+      end,
+      {ok, Req4, State}
+  end.
+
+-spec handle_req_read_body(http_req(), binary()) -> {ok, binary(), http_req()}.
+handle_req_read_body(Req0, Acc) ->
+  case cowboy_req:read_body(Req0) of
+    {ok, Data, Req} -> {ok, << Acc/binary, Data/binary >>, Req};
+    {more, Data, Req} -> handle_req_read_body(Req, << Acc/binary, Data/binary >>)
+  end.
 
 %% TODO remove terminate/3, it's now optional in cowboy_handler
 -spec terminate(cowboy_http_handler:terminate_reason(), http_req(), #state{}) -> ok.
