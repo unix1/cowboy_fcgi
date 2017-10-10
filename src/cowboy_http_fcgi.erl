@@ -168,14 +168,6 @@ handle_req(Req,
     {ok, Ref} ->
       {ok, Body, Req3} = handle_req_read_body(Req, <<>>),
       ex_fcgi:send(Server, Ref, Body),
-      %Req3 = case cowboy_req:read_body(Req) of
-      %  {ok, Body, Req2} ->
-      %    ex_fcgi:send(Server, Ref, Body),
-      %    Req2;
-      %  %% TODO do we need to add {more, Body, Req} case?
-      %  {error, badarg} ->
-      %    Req
-      %end,
       Fun = fun decode_cgi_head/3,
       {ok, Req4} = case fold_k_stdout(#cgi_head{}, <<>>, Fun, Ref) of
         {Head, Rest, Fold} ->
