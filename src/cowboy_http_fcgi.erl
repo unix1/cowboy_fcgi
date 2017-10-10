@@ -15,7 +15,7 @@
 -module(cowboy_http_fcgi).
 -author('Anthony Ramine <nox@dev-extend.eu>').
 -behaviour(cowboy_handler).
--export([init/2, handle/2, terminate/3]).
+-export([init/2, handle/2]).
 
 -include_lib("eunit/include/eunit.hrl").
 
@@ -193,11 +193,6 @@ handle_req_read_body(Req0, Acc) ->
     {ok, Data, Req} -> {ok, << Acc/binary, Data/binary >>, Req};
     {more, Data, Req} -> handle_req_read_body(Req, << Acc/binary, Data/binary >>)
   end.
-
-%% TODO remove terminate/3, it's now optional in cowboy_handler
--spec terminate(cowboy_http_handler:terminate_reason(), http_req(), #state{}) -> ok.
-terminate(_Reason, _Req, _State) ->
-  ok.
 
 -spec path_info(PathInfo::cowboy_dispatcher:path_tokens(),
                 Path::cowboy_dispatcher:path_tokens()) ->
