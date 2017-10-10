@@ -39,7 +39,7 @@
                 path_root :: undefined | iodata(),
                 https :: boolean()}).
 
--record(cgi_head, {status = 200 :: cowboy_http:status(),
+-record(cgi_head, {status = 200 :: cowboy:http_status(),
                    type :: undefined | binary(),
                    location :: undefined | binary(),
                    headers = #{} :: cowboy:http_headers()}).
@@ -458,7 +458,7 @@ send_redirect(Req, #cgi_head{type = Type,
                              headers = Headers}, Body) ->
   reply(Req, Body, 302, Type, maps:put(<<"Location">>, Location, Headers)).
 
--spec reply(http_req(), [binary()], cowboy_http:status(), undefined | binary(),
+-spec reply(http_req(), [binary()], cowboy:http_status(), undefined | binary(),
             cowboy:http_headers()) -> http_req().
 %% @todo Filter headers like Content-Length.
 reply(Req, Body, Status, undefined, Headers) ->
