@@ -34,9 +34,11 @@ build-plt: .cowboy_fcgi_dialyzer.plt
 		-pa deps/*/ebin deps/*/ebin/*.beam
 
 dialyze:
-	@$(DIALYZER) --src src --plt $< \
-		-Wbehaviours -Werror_handling \
-		-Wrace_conditions -Wunmatched_returns # -Wunderspecs
+	@$(DIALYZER) \
+		--src src --plt .cowboy_fcgi_dialyzer.plt \
+		-Werror_handling \
+		-Wrace_conditions \
+		-Wunmatched_returns # -Wunderspecs
 
 docs:
 	@$(REBAR) doc
