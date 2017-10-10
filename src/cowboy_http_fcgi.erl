@@ -153,7 +153,7 @@ handle_req(Req,
                 {<<"QUERY_STRING">>, RawQs},
                 {<<"REMOTE_ADDR">>, AddressStr},
                 {<<"REMOTE_HOST">>, AddressStr},
-                {<<"REQUEST_METHOD">>, method(Method)},
+                {<<"REQUEST_METHOD">>, Method},
                 {<<"SERVER_NAME">>, RawHost},
                 {<<"SERVER_PORT">>, integer_to_list(Port)},
                 {<<"SERVER_PROTOCOL">>, protocol(Version)},
@@ -209,24 +209,6 @@ path_info([Segment|PathInfo], [Segment|Path], CGIPathInfo) ->
   path_info(PathInfo, Path, [$/, Segment|CGIPathInfo]);
 path_info([], Path, CGIPathInfo) ->
   {CGIPathInfo, lists:reverse(Path)}.
-
--spec method(cowboy_http:method()) -> binary().
-method('GET') ->
-  <<"GET">>;
-method('POST') ->
-  <<"POST">>;
-method('PUT') ->
-  <<"PUT">>;
-method('HEAD') ->
-  <<"HEAD">>;
-method('DELETE') ->
-  <<"DELETE">>;
-method('OPTIONS') ->
-  <<"OPTIONS">>;
-method('TRACE') ->
-  <<"TRACE">>;
-method(Method) when is_binary(Method) ->
-  Method.
 
 -spec protocol(cowboy:http_version()) -> binary().
 protocol(Version) when is_atom(Version) ->
