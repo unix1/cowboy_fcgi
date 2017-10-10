@@ -107,7 +107,7 @@ handle(Req, State = #state{path_root = PathRoot}, {req, Path, PathInfo, _}) ->
   handle_scriptname(Req, State, CGIParams, ScriptName).
 
 -spec handle_scriptname(http_req(), #state{}, [{binary(), iodata()}],
-                        cowboy_dispatcher:path_tokens()) ->
+                        cowboy_router:tokens()) ->
                          {ok, http_req(), #state{}}.
 handle_scriptname(Req, State = #state{script_dir = undefined}, CGIParams, []) ->
   handle_req(Req, State, [{<<"SCRIPT_NAME">>, <<"/">>} | CGIParams]);
@@ -193,18 +193,18 @@ handle_req_read_body(Req0, Acc) ->
     {more, Data, Req} -> handle_req_read_body(Req, << Acc/binary, Data/binary >>)
   end.
 
--spec path_info(PathInfo::cowboy_dispatcher:path_tokens(),
-                Path::cowboy_dispatcher:path_tokens()) ->
+-spec path_info(PathInfo::cowboy_router:tokens(),
+                Path::cowboy_router:tokens()) ->
                  {CGIPathInfo::iolist(),
-                  ScriptName::cowboy_dispatcher:path_tokens()}.
+                  ScriptName::cowboy_router:tokens()}.
 path_info(PathInfo, Path) ->
   path_info(lists:reverse(PathInfo), lists:reverse(Path), []).
 
--spec path_info(PathInfo::cowboy_dispatcher:path_tokens(),
-                Path::cowboy_dispatcher:path_tokens(),
+-spec path_info(PathInfo::cowboy_router:tokens(),
+                Path::cowboy_router:tokens(),
                 CGIPathInfo::iolist()) ->
                   {CGIPathInfo::iolist(),
-                   ScriptName::cowboy_dispatcher:path_tokens()}.
+                   ScriptName::cowboy_router:tokens()}.
 path_info([Segment|PathInfo], [Segment|Path], CGIPathInfo) ->
   path_info(PathInfo, Path, [$/, Segment|CGIPathInfo]);
 path_info([], Path, CGIPathInfo) ->
