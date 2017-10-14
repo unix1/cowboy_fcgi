@@ -60,7 +60,7 @@ init(Req, Opts) ->
   Https = cowboy_req:scheme(Req) =:= <<"https">>,
   State = case whereis(Name) of
     Server when is_pid(Server) ->
-      #state{server = whereis(Name),
+      #state{server = Server,
              timeout = Timeout,
              script_dir = ScriptDir,
              path_root = PathRoot,
