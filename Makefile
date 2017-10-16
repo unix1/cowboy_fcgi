@@ -1,7 +1,7 @@
 # See LICENSE for licensing information.
 
 DIALYZER = dialyzer
-REBAR = rebar
+REBAR = rebar3
 
 .PHONY: all app deps clean tests eunit ct build-plt dialyze docs
 

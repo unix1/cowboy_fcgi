@@ -3,8 +3,10 @@
 .idea/
 .rebar/
 *.kdev4
+_build/
 cowboy_fcgi.iml
 deps/
 ebin/
 logs/
+rebar.lock
 test/*.beam
