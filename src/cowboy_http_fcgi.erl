@@ -33,7 +33,7 @@
 
 -export_type([option/0]).
 
--record(state, {server :: atom(),
+-record(state, {server :: pid(),
                 timeout :: uint32(),
                 script_dir :: undefined | iodata(),
                 path_root :: undefined | iodata(),
@@ -217,17 +217,16 @@ protocol(Version) when is_atom(Version) ->
 -spec params(cowboy:http_headers(), [{binary(), iodata()}]) -> [{binary(), iodata()}].
 params(Params, Acc) ->
   F = fun (Name, Value, Acc1) ->
-        case param(Name) of
-          ignore ->
-            Acc1;
-          ParamName ->
-            case Acc1 of
-              [{ParamName, AccValue} | Acc2] ->
-                % Value is counter-intuitively prepended to AccValue
-                % because Cowboy accumulates headers in reverse order.
-                [{ParamName, [Value, value_sep(Name) | AccValue]} | Acc2];
-              _ ->
-                [{ParamName, Value} | Acc1] end end end,
+    ParamName = param(Name),
+    case Acc1 of
+      [{ParamName, AccValue} | Acc2] ->
+        % Value is counter-intuitively prepended to AccValue
+        % because Cowboy accumulates headers in reverse order.
+        [{ParamName, [Value, value_sep(Name) | AccValue]} | Acc2];
+      _ ->
+        [{ParamName, Value} | Acc1]
+    end
+  end,
   maps:fold(F, Acc, Params).
 
 -spec value_sep(binary()) -> char().
@@ -238,7 +237,7 @@ value_sep(<<"cookie">>) ->
 value_sep(_Header) ->
   $,.
 
--spec param(binary()) -> binary() | ignore.
+-spec param(binary()) -> binary().
 param(<<"accept">>) ->
   <<"HTTP_ACCEPT">>;
 param(<<"accept-charset">>) ->
