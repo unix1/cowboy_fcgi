@@ -43,9 +43,8 @@ groups() ->
 init_per_suite(Config) ->
 	case application:load(ex_fcgi) of
 		ok ->
-			ok = application:start(ranch),
-			ok = application:start(cowlib),
-			ok = application:start(cowboy),
+			{ok, _} = application:ensure_all_started(cowboy),
+			{ok, _} = application:ensure_all_started(inets),
 			ok = application:start(ex_fcgi),
 			Config;
 		{error, _Reason} ->

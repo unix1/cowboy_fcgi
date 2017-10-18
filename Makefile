@@ -1,44 +1,10 @@
-# See LICENSE for licensing information.
+PROJECT = cowboy_fcgi
+PROJECT_DESCRIPTION = FastCGI handler for Cowboy
 
-DIALYZER = dialyzer
-REBAR = rebar3
+DEPS = ex_fcgi cowboy
+dep_ex_fcgi = git https://github.com/unix1/ex_fcgi 1.0.2
+dep_cowboy = git https://github.com/ninenines/cowboy 2.0.0
 
-.PHONY: all app deps clean tests eunit ct build-plt dialyze docs
+#TEST_DEPS = inets
 
-all: app
-
-app: deps
-	@$(REBAR) compile
-
-deps:
-	@$(REBAR) get-deps
-
-clean:
-	@$(REBAR) clean
-	rm -f test/*.beam
-	rm -f erl_crash.dump
-
-tests: clean app eunit ct
-
-eunit:
-	@$(REBAR) eunit skip_deps=true
-
-ct:
-	@$(REBAR) ct
-
-build-plt: .cowboy_fcgi_dialyzer.plt
-
-.cowboy_fcgi_dialyzer.plt: deps all
-	@$(DIALYZER) --build_plt --output_plt $@ \
-		--apps kernel stdlib sasl inets crypto public_key ssl \
-		-pa deps/*/ebin deps/*/ebin/*.beam
-
-dialyze:
-	@$(DIALYZER) \
-		--src src --plt .cowboy_fcgi_dialyzer.plt \
-		-Werror_handling \
-		-Wrace_conditions \
-		-Wunmatched_returns # -Wunderspecs
-
-docs:
-	@$(REBAR) doc
+include erlang.mk

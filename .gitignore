@@ -1,9 +1,11 @@
-.cowboy_fcgi_dialyzer.plt
+.erlang.mk/
 .eunit/
 .idea/
 .rebar/
+*.plt
 *.kdev4
 _build/
+cowboy_fcgi.d
 cowboy_fcgi.iml
 deps/
 ebin/
