@@ -32,7 +32,9 @@ Use a web client or a browser to visit
 
 [http://localhost:33080/hello.php](http://localhost:33080/hello.php)
 
-You should see a simple response from hello.php script.
+You should see a simple response from hello.php script. Get more details in the
+example's
+[README](https://github.com/unix1/cowboy_fcgi/tree/master/examples/cowboy_php_hello).
 
 ## docs
 
