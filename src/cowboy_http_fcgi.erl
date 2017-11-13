@@ -13,7 +13,6 @@
 %% OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 -module(cowboy_http_fcgi).
--author('Anthony Ramine <nox@dev-extend.eu>').
 -behaviour(cowboy_handler).
 -export([init/2]).
 
